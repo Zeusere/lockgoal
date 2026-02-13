@@ -1,244 +1,87 @@
 import React, {useEffect} from 'react';
-import {View, Text, StyleSheet, ScrollView} from 'react-native';
-import Animated, {FadeInDown, FadeInUp} from 'react-native-reanimated';
+import {View, Text, StyleSheet, ScrollView, Alert} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
-import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
-import {
-  CircularProgress,
-  Button,
-  StreakBadge,
-  AppCard,
-  AVAILABLE_APPS,
-} from '../../components';
-import {GOAL_TYPES} from '../../components/GoalCard';
-import {useGoalStore, useAppStore} from '../../store';
-import {useScreenTime} from '../../hooks/useScreenTime';
-import {MainTabParamList} from '../../navigation/types';
+import {Button, AppCard, AVAILABLE_APPS, StreakBadge} from '../../components';
+import {useAppStore, useFocusStore, useGoalStore} from '../../store';
 import {colors, typography, spacing, borderRadius} from '../../theme';
-
-type NavigationProp = BottomTabNavigationProp<MainTabParamList, 'Today'>;
+import {useScreenTime} from '../../hooks/useScreenTime';
 
 export const TodayScreen: React.FC = () => {
-  const navigation = useNavigation<NavigationProp>();
-  const {goalType, dailyTarget, todayProgress, streak, isGoalMet} =
-    useGoalStore();
+  const {dailyGoals, isGoalMet} = useGoalStore();
   const {blockedAppIds} = useAppStore();
+  const {isFocusModeActive, countdown, startCountdown, setCountdown, activateFocusMode} = useFocusStore();
   const {syncBlockStatus} = useScreenTime();
+  const streak = useGoalStore(state => state.streak);
 
-  const selectedGoal = GOAL_TYPES.find(g => g.type === goalType);
-  const blockedApps = AVAILABLE_APPS.filter(app =>
-    blockedAppIds.includes(app.id),
-  );
-  const remaining = Math.max(dailyTarget - todayProgress, 0);
+  const blockedApps = AVAILABLE_APPS.filter(app => blockedAppIds.includes(app.id));
 
-  // Sync block status whenever goal completion changes
   useEffect(() => {
-    syncBlockStatus();
-  }, [isGoalMet, syncBlockStatus]);
-
-  const getGoalTitle = () => {
-    switch (goalType) {
-      case 'reading':
-        return "Today's Reading";
-      case 'studying':
-        return "Today's Study Session";
-      case 'training':
-        return "Today's Training";
-      case 'watching':
-        return "Today's Viewing";
-      default:
-        return "Today's Goal";
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (countdown !== null && countdown > 0) {
+      interval = setInterval(() => setCountdown(countdown - 1), 1000);
     }
-  };
+    if (countdown === 0) {
+      activateFocusMode();
+      syncBlockStatus();
+      setCountdown(null);
+      Alert.alert('Focus mode activo', 'Apps bloqueadas. Cumple todos tus objetivos para desbloquear.');
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [countdown, setCountdown, activateFocusMode, syncBlockStatus]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <Animated.View
-          entering={FadeInUp.duration(500).delay(100)}
-          style={styles.header}>
-          <View>
-            <Text style={styles.title}>{getGoalTitle()}</Text>
-            <StreakBadge days={streak} />
-          </View>
-        </Animated.View>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Hoy toca ejecutar</Text>
+        <StreakBadge days={streak} />
 
-        {/* Progress circle */}
-        <Animated.View
-          entering={FadeInUp.duration(600).delay(200)}
-          style={styles.progressContainer}>
-          <CircularProgress
-            current={todayProgress}
-            total={dailyTarget}
-            size={200}
-            strokeWidth={12}
-            label={`of ${dailyTarget} ${selectedGoal?.unit || 'pages'}`}
-          />
-        </Animated.View>
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>{isGoalMet ? '✅ Todo cumplido' : '🔒 Bloqueo activo hasta completar todo'}</Text>
+          <Text style={styles.stateSubtitle}>{isFocusModeActive ? 'Focus mode en marcha' : 'Pulsa Lets go to work para empezar el bloqueo'}</Text>
+          <Button title="Lets go to work" onPress={startCountdown} disabled={isGoalMet || countdown !== null} />
+        </View>
 
-        {/* Lock status */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(400)}
-          style={styles.lockStatusContainer}>
-          {isGoalMet ? (
-            <View style={styles.unlockedBanner}>
-              <Text style={styles.unlockedIcon}>🎉</Text>
-              <View>
-                <Text style={styles.unlockedTitle}>Goal Complete!</Text>
-                <Text style={styles.unlockedSubtitle}>
-                  All your apps are unlocked
-                </Text>
-              </View>
+        {countdown !== null && <Text style={styles.countdown}>Focus in {countdown}</Text>}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Objetivos de hoy</Text>
+          {dailyGoals.map(goal => (
+            <View key={goal.id} style={styles.goalRow}>
+              <Text style={styles.goalText}>{goal.title}</Text>
+              <Text style={styles.goalProgress}>{goal.progress}/{goal.target}</Text>
             </View>
-          ) : (
-            <View style={styles.lockedBanner}>
-              <Text style={styles.lockedIcon}>🔒</Text>
-              <Text style={styles.lockedText}>
-                {remaining} {selectedGoal?.unit || 'pages'} to unlock
-              </Text>
-            </View>
-          )}
-        </Animated.View>
+          ))}
+        </View>
 
-        {/* Capture button */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(500)}
-          style={styles.captureButtonContainer}>
-          <Button
-            title={
-              goalType === 'reading' ? 'Capture Page' : 'Log Progress'
-            }
-            onPress={() => navigation.navigate('Capture')}
-            icon={
-              <Text style={{fontSize: 18}}>
-                {goalType === 'reading' ? '📷' : '✏️'}
-              </Text>
-            }
-          />
-        </Animated.View>
-
-        {/* Blocked apps */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(600)}
-          style={styles.appsSection}>
-          <Text style={styles.sectionTitle}>Your Apps</Text>
-          <Text style={styles.sectionSubtitle}>
-            {isGoalMet
-              ? 'All apps unlocked - great job!'
-              : 'Complete your goal to unlock'}
-          </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Apps bloqueadas</Text>
           <View style={styles.appsGrid}>
-            {blockedApps.map((app, index) => (
-              <Animated.View
-                key={app.id}
-                entering={FadeInDown.duration(300).delay(700 + index * 80)}>
-                <AppCard app={app} locked={!isGoalMet} compact />
-              </Animated.View>
+            {blockedApps.map(app => (
+              <AppCard key={app.id} app={app} locked={!isGoalMet} compact />
             ))}
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xxl,
-  },
-
-  // Header
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-
-  // Progress
-  progressContainer: {
-    alignItems: 'center',
-    marginTop: spacing.xxl,
-    marginBottom: spacing.xl,
-  },
-
-  // Lock status
-  lockStatusContainer: {
-    paddingHorizontal: spacing.xl,
-  },
-  lockedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.secondary + '30',
-    borderRadius: borderRadius.lg,
-  },
-  lockedIcon: {
-    fontSize: 16,
-  },
-  lockedText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  unlockedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.primary + '12',
-    borderRadius: borderRadius.lg,
-  },
-  unlockedIcon: {
-    fontSize: 28,
-  },
-  unlockedTitle: {
-    ...typography.label,
-    color: colors.primary,
-  },
-  unlockedSubtitle: {
-    ...typography.bodySmall,
-    color: colors.primaryLight,
-    marginTop: 2,
-  },
-
-  // Capture button
-  captureButtonContainer: {
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.xl,
-  },
-
-  // Apps section
-  appsSection: {
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.xxl,
-  },
-  sectionTitle: {
-    ...typography.h4,
-    color: colors.textPrimary,
-  },
-  sectionSubtitle: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  appsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-    marginTop: spacing.lg,
-  },
+  container: {flex: 1, backgroundColor: colors.background},
+  content: {padding: spacing.xl, paddingBottom: spacing.xxxl},
+  title: {...typography.h2, color: colors.textPrimary, marginBottom: spacing.sm},
+  stateCard: {backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.lg, gap: spacing.sm, marginTop: spacing.lg},
+  stateTitle: {...typography.label, color: colors.textPrimary},
+  stateSubtitle: {...typography.bodySmall, color: colors.textSecondary},
+  countdown: {...typography.h1, color: colors.primary, textAlign: 'center', marginTop: spacing.lg},
+  section: {marginTop: spacing.xl},
+  sectionTitle: {...typography.h4, color: colors.textPrimary, marginBottom: spacing.sm},
+  goalRow: {flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md, marginBottom: spacing.sm},
+  goalText: {...typography.body, color: colors.textPrimary, flex: 1, paddingRight: spacing.md},
+  goalProgress: {...typography.label, color: colors.primary},
+  appsGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md},
 });

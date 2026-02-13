@@ -1,96 +1,132 @@
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import {zustandStorage} from '../utils/storage';
-import {GoalType} from '../components/GoalCard';
 
-interface DailyProgress {
-  date: string; // ISO date string YYYY-MM-DD
-  current: number;
-  completed: boolean;
+export interface DailyGoal {
+  id: string;
+  title: string;
+  target: number;
+  progress: number;
 }
 
 interface GoalState {
-  // Goal configuration
-  goalType: GoalType;
-  dailyTarget: number;
-
-  // Progress
-  todayProgress: number;
+  dailyGoals: DailyGoal[];
   streak: number;
   lastCompletedDate: string | null;
-  history: DailyProgress[];
-
-  // Computed
+  history: {date: string; completed: boolean}[];
   isGoalMet: boolean;
 
-  // Actions
-  setGoalType: (type: GoalType) => void;
-  setDailyTarget: (target: number) => void;
-  incrementProgress: (amount?: number) => void;
+  addGoal: (title: string, target: number) => void;
+  updateGoal: (id: string, updates: Partial<Pick<DailyGoal, 'title' | 'target'>>) => void;
+  removeGoal: (id: string) => void;
+  incrementGoalProgress: (id: string, amount?: number) => void;
   resetDailyProgress: () => void;
+  setGoals: (goals: Array<{title: string; target: number}>) => void;
   checkAndUpdateStreak: () => void;
 }
 
-const getTodayString = (): string => {
-  return new Date().toISOString().split('T')[0];
-};
+const getTodayString = () => new Date().toISOString().split('T')[0];
+
+const computeGoalMet = (goals: DailyGoal[]) =>
+  goals.length > 0 && goals.every(goal => goal.progress >= goal.target);
+
+const id = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
 export const useGoalStore = create<GoalState>()(
   persist(
     (set, get) => ({
-      // Default state
-      goalType: 'reading',
-      dailyTarget: 20,
-      todayProgress: 0,
+      dailyGoals: [{id: id(), title: 'Leer 20 páginas', target: 20, progress: 0}],
       streak: 0,
       lastCompletedDate: null,
       history: [],
       isGoalMet: false,
 
-      setGoalType: (type: GoalType) => set({goalType: type}),
+      addGoal: (title, target) => {
+        const safeTarget = Math.max(1, target);
+        set(state => {
+          const dailyGoals = [...state.dailyGoals, {id: id(), title, target: safeTarget, progress: 0}];
+          return {dailyGoals, isGoalMet: computeGoalMet(dailyGoals)};
+        });
+      },
 
-      setDailyTarget: (target: number) => set({dailyTarget: target}),
+      updateGoal: (goalId, updates) => {
+        set(state => {
+          const dailyGoals = state.dailyGoals.map(goal =>
+            goal.id === goalId
+              ? {
+                  ...goal,
+                  ...updates,
+                  target: updates.target ? Math.max(1, updates.target) : goal.target,
+                  progress:
+                    updates.target && goal.progress > updates.target
+                      ? updates.target
+                      : goal.progress,
+                }
+              : goal,
+          );
+          return {dailyGoals, isGoalMet: computeGoalMet(dailyGoals)};
+        });
+      },
 
-      incrementProgress: (amount = 1) => {
+      removeGoal: goalId => {
+        set(state => {
+          const dailyGoals = state.dailyGoals.filter(goal => goal.id !== goalId);
+          return {dailyGoals, isGoalMet: computeGoalMet(dailyGoals)};
+        });
+      },
+
+      incrementGoalProgress: (goalId, amount = 1) => {
         const state = get();
-        const newProgress = state.todayProgress + amount;
-        const isGoalMet = newProgress >= state.dailyTarget;
+        const dailyGoals = state.dailyGoals.map(goal =>
+          goal.id === goalId
+            ? {...goal, progress: Math.min(goal.progress + amount, goal.target)}
+            : goal,
+        );
+
+        const isGoalMet = computeGoalMet(dailyGoals);
         const today = getTodayString();
+        const becameCompleted = isGoalMet && !state.isGoalMet;
+
+        if (!becameCompleted) {
+          set({dailyGoals, isGoalMet});
+          return;
+        }
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const newStreak =
+          state.lastCompletedDate === yesterdayStr
+            ? state.streak + 1
+            : state.lastCompletedDate === today
+              ? state.streak
+              : 1;
 
         set({
-          todayProgress: newProgress,
+          dailyGoals,
           isGoalMet,
+          streak: newStreak,
+          lastCompletedDate: today,
+          history: [...state.history, {date: today, completed: true}],
         });
-
-        // If goal just completed, update streak
-        if (isGoalMet && !state.isGoalMet) {
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-          const newStreak =
-            state.lastCompletedDate === yesterdayStr
-              ? state.streak + 1
-              : state.lastCompletedDate === today
-                ? state.streak
-                : 1;
-
-          set({
-            streak: newStreak,
-            lastCompletedDate: today,
-            history: [
-              ...state.history,
-              {date: today, current: newProgress, completed: true},
-            ],
-          });
-        }
       },
 
       resetDailyProgress: () => {
-        set({
-          todayProgress: 0,
+        set(state => ({
+          dailyGoals: state.dailyGoals.map(goal => ({...goal, progress: 0})),
           isGoalMet: false,
-        });
+        }));
+      },
+
+      setGoals: goals => {
+        const dailyGoals = goals.map(goal => ({
+          id: id(),
+          title: goal.title,
+          target: Math.max(1, goal.target),
+          progress: 0,
+        }));
+        set({dailyGoals, isGoalMet: false});
       },
 
       checkAndUpdateStreak: () => {
@@ -100,7 +136,6 @@ export const useGoalStore = create<GoalState>()(
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-        // If last completed date is not today or yesterday, reset streak
         if (
           state.lastCompletedDate !== today &&
           state.lastCompletedDate !== yesterdayStr
@@ -108,11 +143,10 @@ export const useGoalStore = create<GoalState>()(
           set({streak: 0});
         }
 
-        // If it's a new day, reset progress
         const lastEntry = state.history[state.history.length - 1];
         if (!lastEntry || lastEntry.date !== today) {
           set({
-            todayProgress: 0,
+            dailyGoals: state.dailyGoals.map(goal => ({...goal, progress: 0})),
             isGoalMet: false,
           });
         }

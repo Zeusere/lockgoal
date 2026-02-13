@@ -1,335 +1,102 @@
 import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import Animated, {FadeInDown, FadeInUp} from 'react-native-reanimated';
+import {View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {AppCard, AVAILABLE_APPS, GOAL_TYPES} from '../../components';
-import {GoalType} from '../../components/GoalCard';
-import {useGoalStore, useAppStore, useOnboardingStore} from '../../store';
+import {AppCard, AVAILABLE_APPS, Button} from '../../components';
+import {useAppStore, useGoalStore, useAuthStore} from '../../store';
 import {colors, typography, spacing, borderRadius} from '../../theme';
+import {saveSessionSnapshot, signUpWithEmail} from '../../services/supabaseService';
 
 export const SettingsScreen: React.FC = () => {
-  const {goalType, dailyTarget, setGoalType, setDailyTarget} = useGoalStore();
   const {blockedAppIds, toggleApp} = useAppStore();
-  const resetOnboarding = useOnboardingStore(state => state.resetOnboarding);
+  const {dailyGoals, addGoal, updateGoal} = useGoalStore();
+  const {isRegistered, setRegistered, userId} = useAuthStore();
 
-  const [targetInput, setTargetInput] = useState(String(dailyTarget));
-  const selectedGoal = GOAL_TYPES.find(g => g.type === goalType);
+  const [goalTitle, setGoalTitle] = useState('');
+  const [goalTarget, setGoalTarget] = useState('1');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleTargetChange = (value: string) => {
-    setTargetInput(value);
-    const numValue = parseInt(value, 10);
-    if (numValue > 0) {
-      setDailyTarget(numValue);
+  const handleAddGoal = () => {
+    const parsed = parseInt(goalTarget, 10);
+    if (!goalTitle || parsed <= 0) {
+      return;
     }
+    addGoal(goalTitle, parsed);
+    setGoalTitle('');
+    setGoalTarget('1');
   };
 
-  const handleGoalTypeChange = (type: GoalType) => {
-    setGoalType(type);
-    // Set default targets
-    switch (type) {
-      case 'reading':
-        setTargetInput('20');
-        setDailyTarget(20);
-        break;
-      case 'studying':
-      case 'training':
-        setTargetInput('30');
-        setDailyTarget(30);
-        break;
-      case 'watching':
-        setTargetInput('45');
-        setDailyTarget(45);
-        break;
+  const handleRegister = async () => {
+    try {
+      const result = await signUpWithEmail(email, password);
+      if (result.userId) {
+        setRegistered(result.userId, email);
+        await saveSessionSnapshot(result.userId, {
+          blockedAppIds,
+          dailyGoals,
+          createdAt: new Date().toISOString(),
+        });
+        Alert.alert('Cuenta creada', 'Tu progreso ya está vinculado para gamificación.');
+      }
+    } catch {
+      Alert.alert('Error', 'No se pudo registrar. Revisa la configuración de Supabase.');
     }
-  };
-
-  const handleResetOnboarding = () => {
-    Alert.alert(
-      'Reset Setup',
-      'This will take you back through the onboarding process. Are you sure?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: resetOnboarding,
-        },
-      ],
-    );
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <Animated.View
-          entering={FadeInUp.duration(500).delay(100)}
-          style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-        </Animated.View>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Settings</Text>
 
-        {/* Goal Type */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(200)}
-          style={styles.section}>
-          <Text style={styles.sectionTitle}>Goal Type</Text>
-          <Text style={styles.sectionSubtitle}>
-            Choose your daily challenge
-          </Text>
-          <View style={styles.goalTypeRow}>
-            {GOAL_TYPES.map(goal => (
-              <TouchableOpacity
-                key={goal.type}
-                style={[
-                  styles.goalTypeChip,
-                  goalType === goal.type && styles.goalTypeChipSelected,
-                ]}
-                onPress={() => handleGoalTypeChange(goal.type)}
-                activeOpacity={0.7}>
-                <Text style={styles.goalTypeEmoji}>{goal.icon}</Text>
-                <Text
-                  style={[
-                    styles.goalTypeLabel,
-                    goalType === goal.type && styles.goalTypeLabelSelected,
-                  ]}>
-                  {goal.title}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        <Text style={styles.sectionTitle}>Objetivos de hoy</Text>
+        {dailyGoals.map(goal => (
+          <View key={goal.id} style={styles.goalRow}>
+            <TextInput value={goal.title} onChangeText={text => updateGoal(goal.id, {title: text})} style={styles.goalInputTitle} />
+            <TextInput value={String(goal.target)} onChangeText={text => updateGoal(goal.id, {target: parseInt(text, 10) || 1})} style={styles.goalInputTarget} keyboardType="number-pad" />
           </View>
-        </Animated.View>
+        ))}
 
-        {/* Daily Goal */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(300)}
-          style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily {selectedGoal?.title} Goal</Text>
-          <View style={styles.goalInputRow}>
-            <View style={styles.goalInputWrapper}>
-              <Text style={styles.goalInputIcon}>
-                {selectedGoal?.icon || '📖'}
-              </Text>
-              <TextInput
-                style={styles.goalInput}
-                value={targetInput}
-                onChangeText={handleTargetChange}
-                keyboardType="number-pad"
-                maxLength={4}
-                selectTextOnFocus
-              />
-            </View>
-            <Text style={styles.goalUnit}>{selectedGoal?.unit}</Text>
-          </View>
-        </Animated.View>
-
-        {/* Apps to Lock */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(400)}
-          style={styles.section}>
-          <Text style={styles.sectionTitle}>Apps to Lock</Text>
-          <Text style={styles.sectionSubtitle}>
-            Select which apps should be locked until you complete your daily goal
-          </Text>
-          <View style={styles.appList}>
-            {AVAILABLE_APPS.map(app => (
-              <AppCard
-                key={app.id}
-                app={app}
-                selected={blockedAppIds.includes(app.id)}
-                onToggle={toggleApp}
-              />
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* Danger zone */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(500)}
-          style={styles.section}>
-          <Text style={[styles.sectionTitle, styles.dangerTitle]}>
-            Advanced
-          </Text>
-          <TouchableOpacity
-            style={styles.dangerButton}
-            onPress={handleResetOnboarding}
-            activeOpacity={0.7}>
-            <Text style={styles.dangerButtonIcon}>🔄</Text>
-            <View>
-              <Text style={styles.dangerButtonTitle}>Redo Setup</Text>
-              <Text style={styles.dangerButtonSubtitle}>
-                Go through onboarding again
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* App info */}
-        <View style={styles.appInfo}>
-          <Text style={styles.appInfoText}>LockGoal v1.0.0</Text>
-          <Text style={styles.appInfoText}>
-            Built with purpose. Stay focused.
-          </Text>
+        <View style={styles.addRow}>
+          <TextInput placeholder="Nuevo objetivo" placeholderTextColor={colors.textTertiary} value={goalTitle} onChangeText={setGoalTitle} style={styles.newGoalTitle} />
+          <TextInput value={goalTarget} onChangeText={setGoalTarget} style={styles.newGoalTarget} keyboardType="number-pad" />
+          <TouchableOpacity onPress={handleAddGoal} style={styles.addPill}><Text style={styles.addPillText}>Añadir</Text></TouchableOpacity>
         </View>
+
+        <Text style={styles.sectionTitle}>Apps bloqueadas</Text>
+        <View style={styles.listCard}>
+          {AVAILABLE_APPS.map(app => <AppCard key={app.id} app={app} selected={blockedAppIds.includes(app.id)} onToggle={toggleApp} />)}
+        </View>
+
+        <Text style={styles.sectionTitle}>Registro (después del onboarding+paywall)</Text>
+        {isRegistered ? (
+          <Text style={styles.registered}>Cuenta vinculada: {userId}</Text>
+        ) : (
+          <View style={styles.authCard}>
+            <TextInput placeholder="Email" placeholderTextColor={colors.textTertiary} value={email} onChangeText={setEmail} style={styles.authInput} autoCapitalize="none" />
+            <TextInput placeholder="Password" placeholderTextColor={colors.textTertiary} value={password} onChangeText={setPassword} style={styles.authInput} secureTextEntry />
+            <Button title="Crear cuenta en Supabase" onPress={handleRegister} />
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xxxl,
-  },
-
-  // Header
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.textPrimary,
-  },
-
-  // Section
-  section: {
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.xxl,
-  },
-  sectionTitle: {
-    ...typography.h4,
-    color: colors.textPrimary,
-  },
-  sectionSubtitle: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-
-  // Goal type
-  goalTypeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  goalTypeChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: colors.borderLight,
-    gap: 4,
-  },
-  goalTypeChipSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '08',
-  },
-  goalTypeEmoji: {
-    fontSize: 22,
-  },
-  goalTypeLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  goalTypeLabelSelected: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-
-  // Goal input
-  goalInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  goalInputWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    height: 52,
-    gap: spacing.sm,
-  },
-  goalInputIcon: {
-    fontSize: 18,
-  },
-  goalInput: {
-    flex: 1,
-    ...typography.h4,
-    color: colors.textPrimary,
-    padding: 0,
-  },
-  goalUnit: {
-    ...typography.body,
-    color: colors.textSecondary,
-    minWidth: 60,
-  },
-
-  // App list
-  appList: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-  },
-
-  // Danger zone
-  dangerTitle: {
-    color: colors.textSecondary,
-  },
-  dangerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  dangerButtonIcon: {
-    fontSize: 24,
-  },
-  dangerButtonTitle: {
-    ...typography.label,
-    color: colors.textPrimary,
-  },
-  dangerButtonSubtitle: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-
-  // App info
-  appInfo: {
-    alignItems: 'center',
-    marginTop: spacing.xxxl,
-    gap: spacing.xs,
-  },
-  appInfoText: {
-    ...typography.caption,
-    color: colors.textTertiary,
-  },
+  container: {flex: 1, backgroundColor: colors.background},
+  content: {padding: spacing.xl, paddingBottom: spacing.xxxl},
+  title: {...typography.h2, color: colors.textPrimary},
+  sectionTitle: {...typography.h4, color: colors.textPrimary, marginTop: spacing.xl, marginBottom: spacing.sm},
+  goalRow: {flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm},
+  goalInputTitle: {flex: 1, backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, color: colors.textPrimary},
+  goalInputTarget: {width: 70, backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, color: colors.textPrimary},
+  addRow: {flexDirection: 'row', gap: spacing.sm, alignItems: 'center'},
+  newGoalTitle: {flex: 1, backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, color: colors.textPrimary},
+  newGoalTarget: {width: 60, backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, color: colors.textPrimary},
+  addPill: {backgroundColor: colors.primary, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm},
+  addPillText: {...typography.labelSmall, color: colors.textInverse},
+  listCard: {backgroundColor: colors.surface, borderRadius: borderRadius.lg, overflow: 'hidden'},
+  authCard: {backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, gap: spacing.sm},
+  authInput: {backgroundColor: colors.surfaceAlt, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.textPrimary},
+  registered: {...typography.body, color: colors.primary},
 });
