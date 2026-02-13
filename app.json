@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "LockGoal",
+    "slug": "lockgoal",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF7F2"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lockgoal.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FAF7F2"
+      },
+      "package": "com.lockgoal.app"
+    },
+    "scheme": "lockgoal",
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#FAF7F2" />
+  <title>LockGoal</title>
+  <style>
+    html, body, #root {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #FAF7F2;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+    /* Mobile frame preview */
+    @media (min-width: 500px) {
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #1a1a1a;
+      }
+      #root {
+        width: 390px;
+        height: 844px;
+        border-radius: 40px;
+        overflow: hidden;
+        box-shadow: 0 0 60px rgba(0,0,0,0.5);
+        position: relative;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>
