@@ -20,7 +20,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     set => ({
       isComplete: false,
       currentStep: 0,
-      totalSteps: 5,
+      totalSteps: 6,
 
       completeOnboarding: () => set({isComplete: true}),
 

@@ -31,14 +31,14 @@ export const Permissions: React.FC = () => {
     if (granted) {
       setTimeout(() => {
         nextStep();
-        navigation.navigate('Ready');
+        navigation.navigate('Paywall');
       }, 500);
     }
   };
 
   const handleSkip = () => {
     nextStep();
-    navigation.navigate('Ready');
+    navigation.navigate('Paywall');
   };
 
   return (

@@ -5,6 +5,7 @@ export type OnboardingStackParamList = {
   SetGoal: undefined;
   SelectApps: undefined;
   Permissions: undefined;
+  Paywall: undefined;
   Ready: undefined;
 };
 

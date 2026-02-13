@@ -6,6 +6,7 @@ import {SetGoal} from '../screens/onboarding/SetGoal';
 import {SelectApps} from '../screens/onboarding/SelectApps';
 import {Permissions} from '../screens/onboarding/Permissions';
 import {Ready} from '../screens/onboarding/Ready';
+import {Paywall} from '../screens/onboarding/Paywall';
 import {colors} from '../theme';
 
 const Stack = createNativeStackNavigator<OnboardingStackParamList>();
@@ -22,6 +23,7 @@ export const OnboardingNavigator: React.FC = () => {
       <Stack.Screen name="SetGoal" component={SetGoal} />
       <Stack.Screen name="SelectApps" component={SelectApps} />
       <Stack.Screen name="Permissions" component={Permissions} />
+      <Stack.Screen name="Paywall" component={Paywall} />
       <Stack.Screen name="Ready" component={Ready} />
     </Stack.Navigator>
   );
