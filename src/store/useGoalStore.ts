@@ -2,8 +2,11 @@ import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import {zustandStorage} from '../utils/storage';
 
+import type {GoalTypeId} from '../theme/goalTypes';
+
 export interface DailyGoal {
   id: string;
+  type?: GoalTypeId;
   title: string;
   target: number;
   progress: number;
@@ -16,12 +19,12 @@ interface GoalState {
   history: {date: string; completed: boolean}[];
   isGoalMet: boolean;
 
-  addGoal: (title: string, target: number) => void;
+  addGoal: (title: string, target: number, goalType?: GoalTypeId) => void;
   updateGoal: (id: string, updates: Partial<Pick<DailyGoal, 'title' | 'target'>>) => void;
   removeGoal: (id: string) => void;
   incrementGoalProgress: (id: string, amount?: number) => void;
   resetDailyProgress: () => void;
-  setGoals: (goals: Array<{title: string; target: number}>) => void;
+  setGoals: (goals: Array<{type?: GoalTypeId; title: string; target: number}>) => void;
   checkAndUpdateStreak: () => void;
 }
 
@@ -35,16 +38,16 @@ const id = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 export const useGoalStore = create<GoalState>()(
   persist(
     (set, get) => ({
-      dailyGoals: [{id: id(), title: 'Leer 20 páginas', target: 20, progress: 0}],
+        dailyGoals: [{id: id(), type: 'read_book', title: 'Read a book', target: 30, progress: 0}],
       streak: 0,
       lastCompletedDate: null,
       history: [],
       isGoalMet: false,
 
-      addGoal: (title, target) => {
+      addGoal: (title, target, goalType?: GoalTypeId) => {
         const safeTarget = Math.max(1, target);
         set(state => {
-          const dailyGoals = [...state.dailyGoals, {id: id(), title, target: safeTarget, progress: 0}];
+          const dailyGoals = [...state.dailyGoals, {id: id(), type: goalType, title, target: safeTarget, progress: 0}];
           return {dailyGoals, isGoalMet: computeGoalMet(dailyGoals)};
         });
       },
@@ -122,6 +125,7 @@ export const useGoalStore = create<GoalState>()(
       setGoals: goals => {
         const dailyGoals = goals.map(goal => ({
           id: id(),
+          type: goal.type,
           title: goal.title,
           target: Math.max(1, goal.target),
           progress: 0,

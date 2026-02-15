@@ -1,23 +1,28 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
 import {colors, typography, borderRadius, spacing} from '../theme';
 
 export interface AppInfo {
   id: string;
   name: string;
-  iconUrl: string;
+  /** Dominio para obtener favicon (Google Favicon API) */
+  domain: string;
   color: string;
 }
 
+const FAVICON_API = 'https://www.google.com/s2/favicons';
+export const faviconUrl = (domain: string, size: number = 128) =>
+  `${FAVICON_API}?domain=${domain}&sz=${size}`;
+
 export const AVAILABLE_APPS: AppInfo[] = [
-  {id: 'instagram', name: 'Instagram', iconUrl: 'https://cdn.simpleicons.org/instagram', color: '#E4405F'},
-  {id: 'tiktok', name: 'TikTok', iconUrl: 'https://cdn.simpleicons.org/tiktok', color: '#000000'},
-  {id: 'twitter', name: 'Twitter', iconUrl: 'https://cdn.simpleicons.org/x', color: '#111111'},
-  {id: 'facebook', name: 'Facebook', iconUrl: 'https://cdn.simpleicons.org/facebook', color: '#1877F2'},
-  {id: 'youtube', name: 'YouTube', iconUrl: 'https://cdn.simpleicons.org/youtube', color: '#FF0000'},
-  {id: 'snapchat', name: 'Snapchat', iconUrl: 'https://cdn.simpleicons.org/snapchat/000000', color: '#FFFC00'},
-  {id: 'reddit', name: 'Reddit', iconUrl: 'https://cdn.simpleicons.org/reddit', color: '#FF4500'},
-  {id: 'netflix', name: 'Netflix', iconUrl: 'https://cdn.simpleicons.org/netflix', color: '#E50914'},
+  {id: 'instagram', name: 'Instagram', domain: 'instagram.com', color: '#E4405F'},
+  {id: 'tiktok', name: 'TikTok', domain: 'tiktok.com', color: '#000000'},
+  {id: 'twitter', name: 'Twitter', domain: 'x.com', color: '#1DA1F2'},
+  {id: 'facebook', name: 'Facebook', domain: 'facebook.com', color: '#1877F2'},
+  {id: 'youtube', name: 'YouTube', domain: 'youtube.com', color: '#FF0000'},
+  {id: 'snapchat', name: 'Snapchat', domain: 'snapchat.com', color: '#FFFC00'},
+  {id: 'reddit', name: 'Reddit', domain: 'reddit.com', color: '#FF4500'},
+  {id: 'netflix', name: 'Netflix', domain: 'netflix.com', color: '#E50914'},
 ];
 
 interface AppCardProps {
@@ -35,11 +40,21 @@ export const AppCard: React.FC<AppCardProps> = ({
   onToggle,
   compact = false,
 }) => {
-  const handlePress = () => {
-    onToggle?.(app.id);
-  };
+  const [iconError, setIconError] = useState(false);
+  const handlePress = () => onToggle?.(app.id);
 
-  const icon = <Image source={{uri: app.iconUrl}} style={compact ? styles.compactIcon : styles.icon} />;
+  const iconUri = faviconUrl(app.domain);
+  const icon = iconError ? (
+    <View style={[styles.iconFallback, compact && styles.iconFallbackCompact]}>
+      <Text style={[styles.iconFallbackText, compact && styles.iconFallbackTextCompact]}>{app.name[0]}</Text>
+    </View>
+  ) : (
+    <Image
+      source={{uri: iconUri}}
+      style={compact ? styles.compactIcon : styles.icon}
+      onError={() => setIconError(true)}
+    />
+  );
 
   if (compact) {
     return (
@@ -92,4 +107,8 @@ const styles = StyleSheet.create({
   compactName: {...typography.caption, color: colors.textSecondary, textAlign: 'center'},
   lockBadge: {position: 'absolute', top: -4, right: -4, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center'},
   lockIcon: {fontSize: 10},
+  iconFallback: {width: 22, height: 22, borderRadius: 11, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center'},
+  iconFallbackCompact: {width: 28, height: 28, borderRadius: 14},
+  iconFallbackText: {...typography.caption, color: colors.textSecondary, fontWeight: '600'},
+  iconFallbackTextCompact: {fontSize: 12},
 });

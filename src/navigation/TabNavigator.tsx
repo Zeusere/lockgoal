@@ -6,6 +6,7 @@ import {TodayScreen} from '../screens/main/TodayScreen';
 import {CaptureScreen} from '../screens/main/CaptureScreen';
 import {SettingsScreen} from '../screens/main/SettingsScreen';
 import {colors, typography} from '../theme';
+import {useTranslation} from '../i18n/useTranslation';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -26,17 +27,20 @@ const TabIcon: React.FC<TabIconProps> = ({icon, label, focused}) => (
   </View>
 );
 
-const TodayTabIcon = ({focused}: {focused: boolean}) => (
-  <TabIcon icon="📋" label="Today" focused={focused} />
-);
+const TodayTabIcon = ({focused}: {focused: boolean}) => {
+  const {t} = useTranslation();
+  return <TabIcon icon="📋" label={t('tab_today')} focused={focused} />;
+};
 
-const CaptureTabIcon = ({focused}: {focused: boolean}) => (
-  <TabIcon icon="📸" label="Capture" focused={focused} />
-);
+const CaptureTabIcon = ({focused}: {focused: boolean}) => {
+  const {t} = useTranslation();
+  return <TabIcon icon="📸" label={t('tab_capture')} focused={focused} />;
+};
 
-const SettingsTabIcon = ({focused}: {focused: boolean}) => (
-  <TabIcon icon="⚙️" label="Settings" focused={focused} />
-);
+const SettingsTabIcon = ({focused}: {focused: boolean}) => {
+  const {t} = useTranslation();
+  return <TabIcon icon="⚙️" label={t('tab_settings')} focused={focused} />;
+};
 
 export const TabNavigator: React.FC = () => {
   return (

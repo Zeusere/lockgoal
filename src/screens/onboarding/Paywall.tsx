@@ -8,6 +8,7 @@ import {Button} from '../../components';
 import {colors, typography, spacing, borderRadius} from '../../theme';
 import {purchasePlan, PlanId} from '../../services/revenueCatService';
 import {useSubscriptionStore, useOnboardingStore} from '../../store';
+import {useTranslation} from '../../i18n/useTranslation';
 
 type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'Paywall'>;
 
@@ -17,6 +18,7 @@ export const Paywall: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const setSubscription = useSubscriptionStore(state => state.setSubscription);
   const nextStep = useOnboardingStore(state => state.nextStep);
+  const {t} = useTranslation();
 
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -28,7 +30,7 @@ export const Paywall: React.FC = () => {
         navigation.navigate('Ready');
       }
     } catch {
-      Alert.alert('Pago no completado', 'No se pudo iniciar RevenueCat. Revisa la configuración.');
+      Alert.alert(t('paywall_alert_title'), t('paywall_alert_message'));
     } finally {
       setIsLoading(false);
     }
@@ -37,22 +39,22 @@ export const Paywall: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Desbloquea tu{`\n`}modo productividad</Text>
-        <Text style={styles.subtitle}>Suscripción gestionada con RevenueCat. Empiezas hoy con foco total.</Text>
+        <Text style={styles.title}>{t('paywall_title')}</Text>
+        <Text style={styles.subtitle}>{t('paywall_subtitle')}</Text>
 
         <TouchableOpacity style={[styles.plan, selectedPlan === 'monthly' && styles.planSelected]} onPress={() => setSelectedPlan('monthly')}>
-          <Text style={styles.planTitle}>Mensual</Text>
-          <Text style={styles.planPrice}>€7.99 / mes</Text>
+          <Text style={styles.planTitle}>{t('paywall_monthly')}</Text>
+          <Text style={styles.planPrice}>{t('paywall_per_month')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.plan, selectedPlan === 'yearly' && styles.planSelected]} onPress={() => setSelectedPlan('yearly')}>
-          <Text style={styles.planTitle}>Anual</Text>
-          <Text style={styles.planPrice}>€59.99 / año</Text>
-          <Text style={styles.badge}>Mejor valor</Text>
+          <Text style={styles.planTitle}>{t('paywall_yearly')}</Text>
+          <Text style={styles.planPrice}>{t('paywall_per_year')}</Text>
+          <Text style={styles.badge}>{t('paywall_badge')}</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.footer}>
-        <Button title="Pagar y continuar" onPress={handleSubscribe} loading={isLoading} />
+        <Button title={t('paywall_cta')} onPress={handleSubscribe} loading={isLoading} />
       </View>
     </SafeAreaView>
   );

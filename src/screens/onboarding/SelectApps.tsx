@@ -14,6 +14,7 @@ import {OnboardingStackParamList} from '../../navigation/types';
 import {Button, AppCard, AVAILABLE_APPS} from '../../components';
 import {useAppStore, useOnboardingStore} from '../../store';
 import {colors, typography, spacing, borderRadius} from '../../theme';
+import {useTranslation} from '../../i18n/useTranslation';
 
 type NavigationProp = NativeStackNavigationProp<
   OnboardingStackParamList,
@@ -24,11 +25,16 @@ export const SelectApps: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const {blockedAppIds, toggleApp} = useAppStore();
   const nextStep = useOnboardingStore(state => state.nextStep);
+  const {t} = useTranslation();
 
   const handleContinue = () => {
     nextStep();
     navigation.navigate('Permissions');
   };
+
+  const count = blockedAppIds.length;
+  const selectedKey = count === 1 ? 'selectapps_selected' : 'selectapps_selected_plural';
+  const lockKey = count === 1 ? 'selectapps_lock' : 'selectapps_lock_plural';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -44,24 +50,21 @@ export const SelectApps: React.FC = () => {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, {width: '50%'}]} />
         </View>
-        <Text style={styles.stepLabel}>Step 2 of 4</Text>
+        <Text style={styles.stepLabel}>{t('selectapps_step', {step: 2, total: 4})}</Text>
       </Animated.View>
 
       {/* Content */}
       <View style={styles.content}>
         <Animated.View entering={FadeInUp.duration(500).delay(200)}>
-          <Text style={styles.title}>Which apps{'\n'}distract you?</Text>
-          <Text style={styles.subtitle}>
-            Select the apps you want to lock until you complete your daily goal.
-          </Text>
+          <Text style={styles.title}>{t('selectapps_title')}</Text>
+          <Text style={styles.subtitle}>{t('selectapps_subtitle')}</Text>
         </Animated.View>
 
         <Animated.View
           entering={FadeInDown.duration(500).delay(400)}
           style={styles.selectedCount}>
           <Text style={styles.selectedCountText}>
-            {blockedAppIds.length} app{blockedAppIds.length !== 1 ? 's' : ''}{' '}
-            selected
+            {t(selectedKey, {count})}
           </Text>
         </Animated.View>
 
@@ -88,7 +91,7 @@ export const SelectApps: React.FC = () => {
         entering={FadeInDown.duration(500).delay(800)}
         style={styles.footer}>
         <Button
-          title={`Lock ${blockedAppIds.length} App${blockedAppIds.length !== 1 ? 's' : ''}`}
+          title={t(lockKey, {count: blockedAppIds.length})}
           onPress={handleContinue}
           disabled={blockedAppIds.length === 0}
         />

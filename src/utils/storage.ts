@@ -20,4 +20,5 @@ export const STORAGE_KEYS = {
   ONBOARDING_COMPLETE: '@lockgoal/onboarding_complete',
   GOAL_STORE: '@lockgoal/goal_store',
   APP_STORE: '@lockgoal/app_store',
+  LOCALE: '@lockgoal/locale',
 } as const;

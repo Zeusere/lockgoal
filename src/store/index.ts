@@ -4,3 +4,4 @@ export {useOnboardingStore} from './useOnboardingStore';
 export {useFocusStore} from './useFocusStore';
 export {useAuthStore} from './useAuthStore';
 export {useSubscriptionStore} from './useSubscriptionStore';
+export {useLocaleStore} from './useLocaleStore';

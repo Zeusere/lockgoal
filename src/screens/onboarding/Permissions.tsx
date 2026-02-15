@@ -13,6 +13,7 @@ import {Button} from '../../components';
 import {useOnboardingStore} from '../../store';
 import {useScreenTime} from '../../hooks/useScreenTime';
 import {colors, typography, spacing, borderRadius} from '../../theme';
+import {useTranslation} from '../../i18n/useTranslation';
 
 type NavigationProp = NativeStackNavigationProp<
   OnboardingStackParamList,
@@ -24,6 +25,7 @@ export const Permissions: React.FC = () => {
   const nextStep = useOnboardingStore(state => state.nextStep);
   const {requestPermission, isLoading} = useScreenTime();
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const {t} = useTranslation();
 
   const handleRequestPermission = async () => {
     const granted = await requestPermission();
@@ -55,7 +57,7 @@ export const Permissions: React.FC = () => {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, {width: '75%'}]} />
         </View>
-        <Text style={styles.stepLabel}>Step 3 of 4</Text>
+        <Text style={styles.stepLabel}>{t('selectapps_step', {step: 3, total: 4})}</Text>
       </Animated.View>
 
       <View style={styles.content}>
@@ -77,11 +79,8 @@ export const Permissions: React.FC = () => {
         <Animated.View
           entering={FadeInUp.duration(500).delay(500)}
           style={styles.textContainer}>
-          <Text style={styles.title}>Enable Screen{'\n'}Time Access</Text>
-          <Text style={styles.subtitle}>
-            LockGoal needs Screen Time permission to block distracting apps
-            until you complete your daily goals.
-          </Text>
+          <Text style={styles.title}>{t('permissions_title')}</Text>
+          <Text style={styles.subtitle}>{t('permissions_subtitle')}</Text>
         </Animated.View>
 
         {/* Permission details */}
@@ -90,18 +89,18 @@ export const Permissions: React.FC = () => {
           style={styles.details}>
           <PermissionDetail
             icon="🔒"
-            title="App Blocking"
-            description="Temporarily restrict access to selected apps"
+            title={t('permissions_detail_blocking_title')}
+            description={t('permissions_detail_blocking_desc')}
           />
           <PermissionDetail
             icon="👁️"
-            title="Privacy First"
-            description="We never read your data or track your usage"
+            title={t('permissions_detail_privacy_title')}
+            description={t('permissions_detail_privacy_desc')}
           />
           <PermissionDetail
             icon="🔓"
-            title="Always Reversible"
-            description="You can revoke access anytime in iOS Settings"
+            title={t('permissions_detail_reversible_title')}
+            description={t('permissions_detail_reversible_desc')}
           />
         </Animated.View>
       </View>
@@ -113,18 +112,18 @@ export const Permissions: React.FC = () => {
         {permissionGranted ? (
           <View style={styles.successBanner}>
             <Text style={styles.successIcon}>✅</Text>
-            <Text style={styles.successText}>Permission granted!</Text>
+            <Text style={styles.successText}>{t('permissions_granted')}</Text>
           </View>
         ) : (
           <>
             <Button
-              title="Allow Screen Time Access"
+              title={t('permissions_allow')}
               onPress={handleRequestPermission}
               loading={isLoading}
               icon={<Text style={{fontSize: 18}}>🛡️</Text>}
             />
             <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-              <Text style={styles.skipText}>Skip for now</Text>
+              <Text style={styles.skipText}>{t('permissions_skip')}</Text>
             </TouchableOpacity>
           </>
         )}

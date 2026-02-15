@@ -1,6 +1,7 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {OnboardingStackParamList} from './types';
+import {OnboardingStory} from '../screens/onboarding/OnboardingStory';
 import {Welcome} from '../screens/onboarding/Welcome';
 import {SetGoal} from '../screens/onboarding/SetGoal';
 import {SelectApps} from '../screens/onboarding/SelectApps';
@@ -19,6 +20,7 @@ export const OnboardingNavigator: React.FC = () => {
         contentStyle: {backgroundColor: colors.background},
         animation: 'slide_from_right',
       }}>
+      <Stack.Screen name="OnboardingStory" component={OnboardingStory} />
       <Stack.Screen name="Welcome" component={Welcome} />
       <Stack.Screen name="SetGoal" component={SetGoal} />
       <Stack.Screen name="SelectApps" component={SelectApps} />
